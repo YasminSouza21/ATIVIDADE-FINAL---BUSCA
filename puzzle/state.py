@@ -9,6 +9,7 @@ class State:
     """Representa um estado do 8-puzzle como tupla imutável de 9 inteiros (0 = espaço vazio)."""
 
     def __init__(self, tiles: Tuple[int, ...], parent: Optional["State"] = None, action: Optional[str] = None, cost: int = 0):
+        tiles = tuple(tiles)
         if len(tiles) != 9 or set(tiles) != set(range(9)):
             raise ValueError("Estado inválido: deve conter exatamente os valores 0-8.")
         self.tiles = tiles
@@ -26,18 +27,52 @@ class State:
 
     def neighbors(self) -> List["State"]:
         """Retorna os estados filhos válidos a partir deste estado."""
-        # TODO: implemente a geração de estados filhos
-        raise NotImplementedError
+        row, column = divmod(self.blank_index, 3)
+
+        moves = (
+            (-1, 0, "Up"),
+            (1, 0, "Down"),
+            (0, -1, "Left"),
+            (0, 1, "Right"),
+        )
+
+        children: List[State] = []
+        for row_delta, column_delta, action in moves:
+            new_row = row + row_delta
+            new_column = column + column_delta
+            if not (0 <= new_row < 3 and 0 <= new_column < 3):
+                continue
+
+            target_index = new_row * 3 + new_column
+            tiles = list(self.tiles)
+            tiles[self.blank_index], tiles[target_index] = (
+                tiles[target_index],
+                tiles[self.blank_index],
+            )
+            children.append(
+                State(
+                    tuple(tiles),
+                    parent=self,
+                    action=action,
+                    cost=self.cost + 1,
+                )
+            )
+
+        return children
 
     def path(self) -> List["State"]:
         """Retorna a sequência de estados do estado inicial até este."""
-        # TODO: implemente a reconstrução do caminho usando self.parent
-        raise NotImplementedError
+        path: List[State] = []
+        current: Optional[State] = self
+        while current is not None:
+            path.append(current)
+            current = current.parent
+        path.reverse()
+        return path
 
     def actions(self) -> List[str]:
         """Retorna a sequência de ações do estado inicial até este."""
-        # TODO: implemente usando path()
-        raise NotImplementedError
+        return [state.action for state in self.path()[1:] if state.action is not None]
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, State) and self.tiles == other.tiles
